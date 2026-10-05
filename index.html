@@ -14,6 +14,7 @@ canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block;cursor:n
 #cnt{position:fixed;left:50%;top:26px;transform:translateX(-50%);font:12px monospace;color:rgba(220,240,255,.75);pointer-events:none;white-space:pre}
 #hud{position:fixed;left:10px;top:8px;font:12px/1.4 monospace;color:rgba(200,235,255,.6);pointer-events:none;white-space:pre}
 #help{transition:opacity 1s;position:fixed;left:10px;bottom:10px;font-size:13px;line-height:1.6;color:rgba(210,235,250,.7);pointer-events:none}
+#anchor{position:fixed;width:84px;height:84px;margin:-42px 0 0 -42px;border:2px dashed rgba(255,255,255,.35);border-radius:50%;pointer-events:none;display:none}
 #ring{position:fixed;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none;display:none}
 #ui{position:fixed;right:10px;top:8px;display:flex;gap:8px}
 #ui button{font-size:15px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;touch-action:manipulation}
@@ -42,7 +43,8 @@ canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block;cursor:n
 <div id="bar"><i id="bP"></i><i id="bN"></i><i id="bC"></i></div>
 <div id="cnt"></div>
 <div id="hud"></div>
-<div id="help"><span class="mouse">マウスで水を動かす ／ クリック・スペース：水を撃つ</span><span class="touch">指で水を動かす ／ もう一本の指でタップすると水を撃つ</span><br>大きい水は小さい水を吸収する。速く当てると砕ける。相手を飲み込め</div>
+<div id="help"><span class="mouse">マウスで水を動かす ／ クリック・スペース：水を撃つ</span><span class="touch">指を置いた所から動かした向きへ進む ／ もう一本の指でタップすると、動かしている向きへ水を撃つ</span><br>大きい水は小さい水を吸収する。速く当てると砕ける。相手を飲み込め</div>
+<div id="anchor"></div>
 <div id="ring"></div>
 <div id="ui"><button id="bFire">撃つ</button><button id="bRst">最初から</button></div>
 <div id="stage"></div>
@@ -245,7 +247,7 @@ const BVX = new Float32Array(MAXP), BVY = new Float32Array(MAXP), CAX = new Floa
 const POW = new Float32Array(MAXP);   // 撃った直後の粒が持つ「勢い」。接触での押しの強さに効く
 const mainRoot = [-1, -1, -1];
 const GP = { M0: 100, ACC0: 800, DR: 2.2, VCAP: 650, K: 4, SPD: 300, NEUT: 0.35, SHOT: 950, CD: 1.0, P0: 0, PT: 1.5, PC: 0.22 };
-const G = { stage: 1, tx: 0, ty: 0, hasT: false, cd: [0, 0, 0], aiT: 0, ai: { tx: 0, ty: 0 }, neutT: 0, time: 0, own: [0, 0, 0] };
+const G = { share0: 0, rel: null, stage: 1, tx: 0, ty: 0, hasT: false, cd: [0, 0, 0], aiT: 0, ai: { tx: 0, ty: 0 }, neutT: 0, time: 0, own: [0, 0, 0] };
 
 // 面ごとの難しさ。em=敵の初期質量、neut=中立の水の量、cd=CPUが撃てる間隔の倍率、aim=CPUの狙いのぶれ(rad)
 const STAGES = [
@@ -327,7 +329,11 @@ function control(dt) {
     if (ROOT[i] !== i || !o) continue;
     const m = BM[i], cx = BX[i] / m, cy = BY[i] / m;
     let tx, ty;
-    if (o === 1) { if (!G.hasT) continue; tx = G.tx; ty = G.ty; }
+    if (o === 1) {
+      if (G.rel) { tx = cx + G.rel.dx; ty = cy + G.rel.dy; }       // タッチ：触れた点からの相対移動
+      else if (G.hasT) { tx = G.tx; ty = G.ty; }
+      else continue;
+    }
     else if (i === mr2) { tx = G.ai.tx; ty = G.ai.ty; }
     else if (mr2 >= 0) { tx = BX[mr2] / BM[mr2]; ty = BY[mr2] / BM[mr2]; }
     else continue;
@@ -450,6 +456,8 @@ function newGame() {
     spawnDrop(x, y, 7 + Math.random() * 6, (Math.random() - .5) * 80, (Math.random() - .5) * 80, 0);
     cnt += n - before;
   }
+  const c = countOwners();
+  G.share0 = c[1] / Math.max(1, c[1] + c[2]);   // 開始時のあなたの割合。勝ちの基準はここから相対的に決める
 }
 // ---SIM-END---
 </script>
@@ -752,23 +760,43 @@ const $ = id => document.getElementById(id);
 const ring = $('ring');
 let over = 0, mouseDown = false;
 function setTarget(e) { G.tx = e.clientX; G.ty = e.clientY; G.hasT = true; ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px'; ring.style.display = 'block'; }
+let lastDir = [0, -1];
 function fire() {
   const r = mainRoot[1];
   if (r < 0) return false;
-  return shoot(1, G.tx - BX[r] / BM[r], G.ty - BY[r] / BM[r]);
+  let dx, dy;
+  if (G.rel) {                       // タッチ：指を動かした向きへ。動かしていなければ直前の向き
+    if (Math.hypot(G.rel.dx, G.rel.dy) > 10) lastDir = [G.rel.dx, G.rel.dy];
+    [dx, dy] = lastDir;
+  } else { dx = G.tx - BX[r] / BM[r]; dy = G.ty - BY[r] / BM[r]; }
+  return shoot(1, dx, dy);
 }
-// マウス：左ボタンで撃つ。タッチ：最初の指で動かし、あとから触れた別の指で撃つ（押しっぱなしで連射）
-let moveId = null, fireId = null;
+// マウス：位置へ向かう／左ボタンで撃つ。タッチ：最初の指は触れた点を基準に相対移動、あとから触れた別の指のタップで撃つ（押しっぱなしで連射）
+const coarse = matchMedia('(pointer:coarse)').matches;   // タッチ主体の端末では、合成されたマウスの動きを無視する
+let moveId = null, fireId = null, ax = 0, ay = 0;
+const anchor = $('anchor');
+function relMove(e) {
+  G.rel = { dx: e.clientX - ax, dy: e.clientY - ay };
+  ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
+}
 cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId);
+  if (e.pointerType === 'mouse' && coarse) return;
   if (e.pointerType === 'mouse') { setTarget(e); mouseDown = true; fire(); }
-  else if (moveId === null) { moveId = e.pointerId; setTarget(e); }
+  else if (moveId === null) {
+    moveId = e.pointerId; ax = e.clientX; ay = e.clientY; G.hasT = false;
+    anchor.style.left = ax + 'px'; anchor.style.top = ay + 'px'; anchor.style.display = 'block';
+    ring.style.display = 'block'; relMove(e);
+  }
   else if (fireId === null) { fireId = e.pointerId; fire(); }
 });
-cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.pointerId === moveId) setTarget(e); });
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse') { if (!coarse) setTarget(e); }
+  else if (e.pointerId === moveId) relMove(e);
+});
 const release = e => {
   mouseDown = false;
-  if (e.pointerId === moveId) moveId = null;
+  if (e.pointerId === moveId) { moveId = null; G.rel = null; anchor.style.display = 'none'; ring.style.display = 'none'; }
   if (e.pointerId === fireId) fireId = null;
 };
 cv.addEventListener('pointerup', release);
@@ -813,7 +841,7 @@ function frame(t) {
   $('cnt').textContent = `あなた ${c[1]}   中立 ${c[0]}   CPU ${c[2]}`;
   if (!over && G.time > 1) {
     const share = c[1] / Math.max(1, c[1] + c[2]);
-    if (c[2] === 0 || share >= 0.85) over = 1; else if (c[1] === 0 || share <= 0.15) over = 2;
+    if (c[2] === 0 || share >= Math.min(0.97, Math.max(0.85, G.share0 + 0.1))) over = 1; else if (c[1] === 0 || share <= 0.15) over = 2;
     if (over) {
       const last = G.stage >= STAGES.length;
       $('endT').textContent = over === 2 ? '負け…' : last ? 'ゲームクリア！' : `STAGE ${G.stage} クリア！`;
