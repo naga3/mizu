@@ -250,22 +250,23 @@ const GP = { M0: 100, ACC0: 800, DR: 2.2, VCAP: 650, K: 4, SPD: 300, NEUT: 0.35,
 const G = { share0: 0, rel: null, stage: 1, tx: 0, ty: 0, hasT: false, cd: [0, 0, 0], aiT: 0, ai: { tx: 0, ty: 0 }, neutT: 0, time: 0, own: [0, 0, 0] };
 
 // 面ごとの難しさ。em=敵の初期質量、neut=中立の水の量、cd=CPUが撃てる間隔の倍率、aim=CPUの狙いのぶれ(rad)
-const STAGES = [
-  { em: 25,  neut: 1.6,  cd: 5.0, aim: 1.0 },
-  { em: 35,  neut: 1.5,  cd: 4.4, aim: .85 },
-  { em: 45,  neut: 1.4,  cd: 3.8, aim: .7 },
-  { em: 56,  neut: 1.3,  cd: 3.2, aim: .58 },
-  { em: 68,  neut: 1.2,  cd: 2.7, aim: .46 },
-  { em: 80,  neut: 1.1,  cd: 2.2, aim: .35 },
-  { em: 91,  neut: 1.0,  cd: 1.8, aim: .25 },     // 7面 = 以前の固定設定（「結構難しい」）
-  { em: 110, neut: .9,   cd: 1.5, aim: .2 },
-  { em: 140, neut: .85,  cd: 1.2, aim: .15 },
-  { em: 280, neut: 1.0,  cd: 1.0, aim: .1, boss: true },
+const STAGES = [   // spd=CPUの移動速度の倍率（水が多いぶん、CPU が育つ勢いを抑える）
+  { em: 25,  neut: 1.6,  cd: 5.0, aim: 1.0,  spd: .50 },
+  { em: 35,  neut: 1.5,  cd: 4.4, aim: .85,  spd: .55 },
+  { em: 45,  neut: 1.4,  cd: 3.8, aim: .7,   spd: .60 },
+  { em: 56,  neut: 1.3,  cd: 3.2, aim: .58,  spd: .65 },
+  { em: 68,  neut: 1.2,  cd: 2.7, aim: .46,  spd: .70 },
+  { em: 80,  neut: 1.1,  cd: 2.2, aim: .35,  spd: .75 },
+  { em: 91,  neut: 1.0,  cd: 1.8, aim: .25,  spd: .80 },
+  { em: 110, neut: .9,   cd: 1.5, aim: .2,   spd: .85 },
+  { em: 140, neut: .85,  cd: 1.2, aim: .15,  spd: .90 },
+  { em: 280, neut: 1.0,  cd: 1.0, aim: .1,   spd: .80, boss: true },
 ];
 function stageCfg() { return STAGES[Math.min(Math.max(G.stage, 1), STAGES.length) - 1]; }
 // 画面が小さいほど敵の質量も小さくする（面積比）
 function massScale() { return Math.min(1.3, Math.max(.4, W * WH / 921600)); }
-function neutralTarget() { return W * WH / 1800 * 0.85 * stageCfg().neut; }
+const NEUT_DENSITY = 2;   // 中立の水の量の倍率（基準=画面面積/1800粒×0.85）
+function neutralTarget() { return W * WH / 1800 * 0.85 * stageCfg().neut * NEUT_DENSITY; }
 
 function find(i) { while (ROOT[i] !== i) { ROOT[i] = ROOT[ROOT[i]]; i = ROOT[i]; } return i; }
 
@@ -339,7 +340,8 @@ function control(dt) {
     else continue;
     const dx = tx - cx, dy = ty - cy, dist = Math.sqrt(dx * dx + dy * dy);
     if (dist < 1) continue;
-    const s = Math.min(1, dist / 50), a = Math.min(GP.VCAP * GP.DR, GP.ACC0 * Math.sqrt(GP.M0 / m));
+    const k = o === 2 ? stageCfg().spd : 1;
+    const s = Math.min(1, dist / 50), a = k * Math.min(GP.VCAP * GP.DR, GP.ACC0 * Math.sqrt(GP.M0 / m));
     CAX[i] = dx / dist * s * a; CAY[i] = dy / dist * s * a;
   }
   for (let i = 0; i < n; i++) {
@@ -412,7 +414,7 @@ function nearBlob(x, y, margin) {
 
 function spawnNeutrals(dt) {
   G.neutT -= dt; if (G.neutT > 0) return;
-  G.neutT = 0.4;
+  G.neutT = 0.4 / NEUT_DENSITY;
   let cnt = 0; for (let i = 0; i < n; i++) if (!OWN[i]) cnt++;
   if (cnt > neutralTarget()) return;
   for (let t = 0; t < 12; t++) {
@@ -449,7 +451,7 @@ function newGame() {
   spawnDrop(W * .78, WH * .5, er, 0, 0, 2);
   const target = neutralTarget(), clear = er + 80;
   let cnt = 0;
-  for (let t = 0; t < 800 && cnt < target; t++) {
+  for (let t = 0; t < 2000 && cnt < target; t++) {
     const x = 40 + Math.random() * (W - 80), y = 40 + Math.random() * (WH - 80);
     if (Math.hypot(x - W * .22, y - WH * .5) < 110 || Math.hypot(x - W * .78, y - WH * .5) < clear) continue;
     const before = n;
