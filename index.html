@@ -14,7 +14,10 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #rotate i{font-style:normal;font-size:64px;display:block;transform:rotate(90deg)}
 #bar{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(560px,56%);height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;pointer-events:none}
 #bar i{display:block;height:100%}
-#bP{background:#4cf0b8}#bN{background:rgba(190,225,255,.35)}#bC{background:#d46bff}
+#bP{background:#4cf0b8}#bC{background:#d46bff}
+#bar b{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;pointer-events:none}
+#tkWin{background:#fff}#tkLose{background:#ff5a5a}
+#goal{position:absolute;left:50%;top:62px;transform:translateX(-50%);font:bold 14px sans-serif;letter-spacing:.06em;color:rgba(235,246,255,.92);text-shadow:0 1px 6px rgba(0,0,0,.7);pointer-events:none;white-space:nowrap}
 #cnt{position:absolute;left:50%;top:26px;transform:translateX(-50%);font:12px monospace;color:rgba(220,240,255,.75);pointer-events:none;white-space:pre}
 #hud{position:absolute;left:10px;top:8px;font:12px/1.4 monospace;color:rgba(200,235,255,.6);pointer-events:none;white-space:pre}
 #help{position:absolute;left:12px;bottom:10px;font-size:13px;line-height:1.7;color:rgba(215,238,252,.78);text-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:none}
@@ -43,12 +46,13 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 </style>
 <div id="fit"><div id="box">
 <canvas id="c"></canvas>
-<div id="bar"><i id="bP"></i><i id="bN"></i><i id="bC"></i></div>
+<div id="bar"><i id="bP"></i><i id="bC"></i><b id="tkLose"></b><b id="tkWin"></b></div>
 <div id="cnt"></div>
 <div id="hud"></div>
 <div id="help"><span class="mouse">移動：マウス<br>撃つ：クリック（スペースキーでも）</span><span class="touch">移動：画面をなぞる<br>撃つ：もう1本の指でタップ</span></div>
 <div id="ui"><button id="bRst">最初から</button></div>
 <div id="stage"></div>
+<div id="goal"></div>
 <div id="intro"></div>
 <div id="end"><div id="endT"></div><div id="endBtns"><button id="endB">もう一度</button><button id="endB2">1面から</button></div></div>
 </div></div>
@@ -271,6 +275,9 @@ function stageCfg() { return STAGES[Math.min(Math.max(G.stage, 1), STAGES.length
 // 画面が小さいほど敵の質量も小さくする（面積比）
 function massScale() { return Math.min(1.3, Math.max(.4, W * WH / 921600)); }
 const NEUT_DENSITY = 2;   // 中立の水の量の倍率（基準=画面面積/1800粒×0.85）
+// 勝ち：あなた÷(あなた＋敵) がこの値以上。開始時の割合から相対的に決める（85%〜97%）
+function winShare() { return Math.min(0.97, Math.max(0.85, G.share0 + 0.1)); }
+const LOSE_SHARE = 0.15;
 function neutralTarget() { return W * WH / 1800 * 0.85 * stageCfg().neut * NEUT_DENSITY; }
 
 function find(i) { while (ROOT[i] !== i) { ROOT[i] = ROOT[ROOT[i]]; i = ROOT[i]; } return i; }
@@ -861,11 +868,15 @@ function frame(t) {
   PRM.iters = simEma > 13 ? 2 : 3;
   draw();
   const c = countOwners(), tot = Math.max(1, n);
-  $('bP').style.width = c[1] / tot * 100 + '%'; $('bN').style.width = c[0] / tot * 100 + '%'; $('bC').style.width = c[2] / tot * 100 + '%';
-  $('cnt').textContent = `あなた ${c[1]}   中立 ${c[0]}   CPU ${c[2]}`;
+  const duel = Math.max(1, c[1] + c[2]), T = winShare();
+  $('bP').style.width = c[1] / duel * 100 + '%'; $('bC').style.width = c[2] / duel * 100 + '%';
+  $('tkWin').style.left = T * 100 + '%'; $('tkLose').style.left = LOSE_SHARE * 100 + '%';
+  $('cnt').textContent = `あなた ${c[1]}　敵 ${c[2]}`;
+  const left = c[2] - Math.floor(c[1] * (1 - T) / T);   // 敵がこの数だけ減れば勝ち
+  $('goal').textContent = over ? '' : left > 0 ? `敵の水を飲み込め　勝ちまで あと ${left} 粒` : '';
   if (!over && G.time > 1) {
     const share = c[1] / Math.max(1, c[1] + c[2]);
-    if (c[2] === 0 || share >= Math.min(0.97, Math.max(0.85, G.share0 + 0.1))) over = 1; else if (c[1] === 0 || share <= 0.15) over = 2;
+    if (c[2] === 0 || share >= winShare()) over = 1; else if (c[1] === 0 || share <= LOSE_SHARE) over = 2;
     if (over) {
       const last = G.stage >= STAGES.length;
       $('endT').textContent = over === 2 ? '負け…' : last ? 'ゲームクリア！' : `STAGE ${G.stage} クリア！`;
