@@ -33,6 +33,15 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #intro small{display:block;font-size:16px;font-weight:normal;letter-spacing:.2em;opacity:.8;margin-top:6px}
 #endBtns{display:flex;gap:12px}
 #endB2{display:none}
+#box{container-type:size}
+#title{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3cqh;background:radial-gradient(ellipse at 50% 45%,rgba(4,26,46,.35),rgba(2,10,20,.72));text-align:center}
+#title h1{visibility:hidden;margin:0;font-size:min(22vh,12vw);font-size:22cqh;line-height:1;letter-spacing:.06em;font-weight:900;color:#eaffff;text-shadow:0 0 3cqh rgba(110,220,255,.85),0 .6cqh 4cqh rgba(0,40,80,.7)}
+#title p{margin:0;font-size:4.2cqh;letter-spacing:.14em;color:rgba(228,246,255,.92);text-shadow:0 1px 8px rgba(0,0,0,.7)}
+#ttlBtns{display:flex;gap:2.4cqh;margin-top:3cqh;flex-wrap:wrap;justify-content:center}
+#ttlBtns button{font-size:4.4cqh;padding:1.6cqh 5cqh;border-radius:999px;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.16);color:#fff;font-weight:bold;letter-spacing:.1em;text-shadow:0 1px 6px rgba(0,0,0,.5);touch-action:manipulation}
+#ttlBtns button.main{background:rgba(110,220,255,.34);border-color:rgba(190,240,255,.95)}
+#ttlBtns small{display:block;font-size:2.8cqh;font-weight:normal;letter-spacing:.12em;opacity:.9;margin-top:.4cqh}
+#box.onTitle #bar,#box.onTitle #cnt,#box.onTitle #stage,#box.onTitle #goal,#box.onTitle #ui,#box.onTitle #intro,#box.onTitle #end{display:none!important}
 #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:18px}
 .touch{display:none}
 @media (pointer:coarse){
@@ -50,11 +59,12 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 <div id="cnt"></div>
 <div id="hud"></div>
 <div id="help"><span class="mouse">移動：マウス<br>撃つ：クリック（スペースキーでも）</span><span class="touch">移動：画面をなぞる<br>撃つ：もう1本の指でタップ</span></div>
-<div id="ui"><button id="bRst">最初から</button></div>
+<div id="ui"><button id="bRst">やり直す</button><button id="bTitle">タイトル</button></div>
 <div id="stage"></div>
 <div id="goal"></div>
 <div id="intro"></div>
-<div id="end"><div id="endT"></div><div id="endBtns"><button id="endB">もう一度</button><button id="endB2">1面から</button></div></div>
+<div id="title"><h1>とぷるん</h1><p>水滴を操って、相手の水を飲み込め</p><div id="ttlBtns"><button id="btnCont" class="main">つづきから<small id="contStage"></small></button><button id="btnNew">はじめから</button></div></div>
+<div id="end"><div id="endT"></div><div id="endBtns"><button id="endB">もう一度</button><button id="endB2">タイトルへ</button></div></div>
 </div></div>
 <div id="anchor"></div>
 <div id="ring"></div>
@@ -75,6 +85,7 @@ const PRM = { kneg: 0.2, eps: 0.002, iters: 3, beta: 0.01, coh: 0.06 };
 const X = new Float32Array(MAXP), Y = new Float32Array(MAXP);
 const PX = new Float32Array(MAXP), PY = new Float32Array(MAXP);
 const VX = new Float32Array(MAXP), VY = new Float32Array(MAXP);
+const HX = new Float32Array(MAXP), HY = new Float32Array(MAXP), HM = new Uint8Array(MAXP);   // タイトル文字の粒：ホーム位置にバネで戻る
 const OWN = new Uint8Array(MAXP), FREE = new Float32Array(MAXP);   // 所有者(0=中立,1=あなた,2=CPU)、発射直後の操作不能時間
 const DX = new Float32Array(MAXP), DY = new Float32Array(MAXP);
 const RHO = new Float32Array(MAXP), RHN = new Float32Array(MAXP);
@@ -115,7 +126,7 @@ function buildGrid() {
 
 function addParticle(x, y, vx, vy, own = 0) {
   if (n >= MAXP) return false;
-  X[n] = x; Y[n] = y; PX[n] = x; PY[n] = y; VX[n] = vx; VY[n] = vy; OWN[n] = own; FREE[n] = 0; POW[n] = 0; CACC[n] = 0; n++;
+  X[n] = x; Y[n] = y; PX[n] = x; PY[n] = y; VX[n] = vx; VY[n] = vy; OWN[n] = own; FREE[n] = 0; POW[n] = 0; HM[n] = 0; CACC[n] = 0; n++;
   np = 0;
   return true;
 }
@@ -256,7 +267,7 @@ const BVX = new Float32Array(MAXP), BVY = new Float32Array(MAXP), CAX = new Floa
 const POW = new Float32Array(MAXP);   // 撃った直後の粒が持つ「勢い」。接触での押しの強さに効く
 const mainRoot = [-1, -1, -1];
 const GP = { M0: 100, ACC0: 800, DR: 2.2, VCAP: 650, K: 4, SPD: 300, NEUT: 0.35, SHOT: 950, CD: 1.0, P0: 0, PT: 1.5, PC: 0.22 };
-const G = { share0: 0, rel: null, stage: 1, tx: 0, ty: 0, hasT: false, cd: [0, 0, 0], aiT: 0, ai: { tx: 0, ty: 0 }, neutT: 0, time: 0, own: [0, 0, 0] };
+const G = { title: false, share0: 0, rel: null, stage: 1, tx: 0, ty: 0, hasT: false, cd: [0, 0, 0], aiT: 0, ai: { tx: 0, ty: 0 }, neutT: 0, time: 0, own: [0, 0, 0] };
 
 // 面ごとの難しさ。em=敵の初期質量、neut=中立の水の量、cd=CPUが撃てる間隔の倍率、aim=CPUの狙いのぶれ(rad)
 const STAGES = [   // spd=CPUの移動速度の倍率（水が多いぶん、CPU が育つ勢いを抑える）
@@ -438,8 +449,19 @@ function spawnNeutrals(dt) {
   }
 }
 
+function addHome(x, y) { if (addParticle(x, y, 0, 0, 0)) { HX[n - 1] = x; HY[n - 1] = y; HM[n - 1] = 1; } }
+
 function gameStep(dt) {
   G.time += dt;
+  if (G.title) {                 // タイトル：文字の粒をバネで元の位置へ。ゆっくり波打たせて、いつもぷるぷるさせる
+    const K = 160, C = 3.5, F = 90, t = G.time;
+    for (let i = 0; i < n; i++) {
+      if (!HM[i]) continue;
+      VX[i] += ((HX[i] - X[i]) * K - VX[i] * C) * dt;
+      VY[i] += ((HY[i] - Y[i]) * K - VY[i] * C + F * Math.sin(2.4 * t + .012 * HX[i] + .02 * HY[i])) * dt;
+    }
+    return;
+  }
   for (let o = 1; o < 3; o++) if (G.cd[o] > 0) G.cd[o] -= dt;
   analyze();
   convert(dt);
@@ -515,7 +537,7 @@ const cProg = prog(`#version 300 es
 void main(){ vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); gl_Position = vec4(p * 2. - 1., 0., 1.); }`,
 `#version 300 es
 precision highp float;
-uniform sampler2D uF; uniform vec2 uRes; uniform vec2 uWorld; uniform float uDpr; uniform float uTime; uniform float uBoss;
+uniform sampler2D uF; uniform vec2 uRes; uniform vec2 uWorld; uniform float uDpr; uniform float uTime; uniform float uBoss; uniform float uTitle;
 const float uLift = 1.;   // 水ではなく底を明るくして透明感を保つ（採用）
 const int uFx = 193; const int uBg = 4; const int uTint = 0; const int uPop = -1;
 const vec3 CP = vec3(.25,1.,.72), CC = vec3(1.,.26,.92);   // あなた=緑、敵=紫
@@ -656,6 +678,7 @@ void main(){
   vec4 Fs = texture(uF, uv - vec2(8., -13.) * ts);
   float sh = smoothstep(.6, 4., Fs.r);
   float pop = float(uPop); if (pop < 0.) pop *= .5;    // 弱い側は半分の刻み（暗くなりすぎないように）
+  base *= 1. - .35 * uTitle;                         // タイトル：周りを暗くして、文字と穴を際立たせる
   if (on(0)) base *= 1. - (.45 + .13 * pop) * sh;                                              // 影
   if (on(1)) base += vec3(.55,.8,1.) * smoothstep(3., 8., Fs.r) * sh * .45;       // 影の芯に集まる光
   float aa = max(fwidth(f), 1e-3);
@@ -676,6 +699,7 @@ void main(){
   else col = refr * mix(vec3(.92,.98,1.), vec3(.55,.82,.95) + uLift * vec3(.30,.14,.04), thick) * 1.25 + vec3(.0,.03,.05) * thick;
   float popB = uLift > .5 ? max(pop, 0.) : pop;                                   // 明るくする実験中は、水を暗く沈ませない
   col = col * (1. + .22 * popB) + vec3(.03,.08,.11) * popB * (.4 + thick);   // 水滴を背景より明るく浮かせる
+  col = col * (1. + .5 * uTitle) + vec3(.05,.12,.16) * uTitle * (.5 + thick);  // タイトル：文字の水を明るく
   float wp = clamp(F.g / max(f, 1e-3), 0., 1.), wc = clamp(F.b / max(f, 1e-3), 0., 1.);
   float ow = clamp(wp + wc, 0., 1.);
   vec3 oc = (CP * wp + CC * wc) / max(wp + wc, 1e-3);
@@ -763,7 +787,7 @@ function draw() {
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
   gl.useProgram(pProg);
   gl.uniform2f(u(pProg, 'uW'), W, WH);
-  gl.uniform1f(u(pProg, 'uSize'), HR * 1.4 * 2 * FW / W);
+  gl.uniform1f(u(pProg, 'uSize'), HR * (titleOn ? 1.05 : 1.4) * 2 * FW / W);
   gl.bindVertexArray(pvao);
   gl.bindBuffer(gl.ARRAY_BUFFER, pbuf);
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, pdata, 0, n * 4);
@@ -779,6 +803,7 @@ function draw() {
   gl.uniform1f(u(cProg, 'uDpr'), cv.width / WW);   // 世界の1単位あたりの描画ピクセル数
   gl.uniform1f(u(cProg, 'uTime'), performance.now() / 1000);
   gl.uniform1f(u(cProg, 'uBoss'), stageCfg().boss ? 1 : 0);
+  gl.uniform1f(u(cProg, 'uTitle'), titleOn ? 1 : 0);
   gl.bindVertexArray(quadVao);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
@@ -833,7 +858,10 @@ const release = e => {
 };
 cv.addEventListener('pointerup', release);
 cv.addEventListener('pointercancel', release);
-addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); fire(); } else if (e.key === 'r') restart(); });
+addEventListener('keydown', e => {
+  if (titleOn) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ($('btnCont').style.display !== 'none' ? $('btnCont') : $('btnNew')).click(); } return; }
+  if (e.key === ' ') { e.preventDefault(); fire(); } else if (e.key === 'r') restart(); else if (e.key === 'Escape') showTitle();
+});
 const SAVE = 'mizuArena.stage';
 let introT = 0;
 function showIntro() {
@@ -844,15 +872,74 @@ function showIntro() {
   $('stage').textContent = cfg.boss ? 'STAGE 10 / 10  BOSS' : `STAGE ${G.stage} / ${STAGES.length}`;
   $('stage').className = cfg.boss ? 'boss' : '';
 }
+let titleOn = true;
+function savedStage() { try { return Math.min(Math.max(+localStorage.getItem(SAVE) || 1, 1), STAGES.length); } catch (e) { return 1; } }
+// タイトル画面。背景では、敵だけが動く 1 面を流しておく
+// h1 と同じ位置・大きさで文字を描いて、その内側に水の粒を敷きつめる
+function buildTitleWater() {
+  n = 0; np = 0;
+  const h1 = document.querySelector('#title h1'), r = h1.getBoundingClientRect(), br = document.getElementById('box').getBoundingClientRect();
+  const k = WW / br.width, cx = (r.left + r.width / 2 - br.left) * k, cy = (r.top + r.height / 2 - br.top) * k - WHH * 0.01;
+  const size = parseFloat(getComputedStyle(h1).fontSize) * k * 1.38;
+  const cvs = document.createElement('canvas'); cvs.width = WW; cvs.height = WHH;
+  const g = cvs.getContext('2d');
+  g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `900 ${size}px ${getComputedStyle(h1).fontFamily}`;
+  if ('letterSpacing' in g) g.letterSpacing = size * 0.06 + 'px';
+  g.fillText(h1.textContent, cx, cy);   // 文字の線は細いが、水は粒の大きさぶんにじんで太く見える。穴を残すため文字は大きめにする
+  const px = g.getImageData(0, 0, WW, WHH).data, hh = SP * Math.sqrt(3) / 2;
+  let row = 0;
+  for (let y = 4; y < WHH - 4; y += hh, row++) {
+    for (let x = 4 + ((row & 1) ? SP / 2 : 0); x < WW - 4; x += SP) {
+      if (px[((y | 0) * WW + (x | 0)) * 4 + 3] > 128) addHome(x, y);
+    }
+  }
+}
+function showTitle() {
+  titleOn = true; over = 0;
+  moveId = null; fireId = null; G.rel = null; mouseDown = false;
+  $('end').style.display = 'none'; $('intro').style.opacity = 0;
+  const sv = savedStage();
+  $('btnCont').style.display = sv > 1 ? 'inline-block' : 'none';
+  $('contStage').textContent = sv > 1 ? `STAGE ${sv} / ${STAGES.length}` : '';
+  $('btnNew').classList.toggle('main', sv <= 1);
+  $('title').style.display = 'flex'; $('box').classList.add('onTitle');
+  G.title = true; G.time = 0; G.hasT = false;
+  buildTitleWater();
+}
 function startStage(k) {
+  titleOn = false; G.title = false; ptr.on = false; $('title').style.display = 'none'; $('box').classList.remove('onTitle');
   G.stage = Math.min(Math.max(k, 1), STAGES.length);
   try { localStorage.setItem(SAVE, G.stage); } catch (e) {}
   newGame(); over = 0; $('end').style.display = 'none'; showIntro();
 }
 function restart() { startStage(G.stage); }
 $('bRst').onclick = restart;
-$('endB').onclick = () => { if (over === 1 && G.stage < STAGES.length) startStage(G.stage + 1); else if (over === 1) startStage(1); else restart(); };
-$('endB2').onclick = () => startStage(1);
+$('bTitle').onclick = showTitle;
+// タイトルでは、なぞった所の水が動く（離すと元の形に戻る）
+(function titleTouch() {
+  const el = document.getElementById('title');
+  let lx = 0, ly = 0, lt = 0;
+  const pos = e => { const r = document.getElementById('box').getBoundingClientRect(); return [(e.clientX - r.left) * WW / r.width, (e.clientY - r.top) * WHH / r.height]; };
+  el.addEventListener('pointermove', e => {
+    if (!titleOn) return;
+    const [x, y] = pos(e), t = performance.now(), dt = Math.max(1, t - lt) / 1000;
+    const vx = Math.max(-1500, Math.min(1500, (x - lx) / dt)), vy = Math.max(-1500, Math.min(1500, (y - ly) / dt));
+    ptr.vx = ptr.vx * .5 + vx * .5; ptr.vy = ptr.vy * .5 + vy * .5;
+    ptr.x = x; ptr.y = y; ptr.on = true; ptr.r = 60; lx = x; ly = y; lt = t;
+  });
+  el.addEventListener('pointerleave', () => { ptr.on = false; });
+  el.addEventListener('pointerdown', e => { if (titleOn && e.pointerType !== 'mouse') { const [x, y] = pos(e); lx = x; ly = y; lt = performance.now(); } });
+  el.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') ptr.on = false; });
+})();
+function lockLandscape() { if (coarse && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }
+$('btnCont').onclick = () => { lockLandscape(); startStage(savedStage()); };
+$('btnNew').onclick = () => {
+  if (savedStage() > 1 && !confirm('1面から始めます。つづきの記録は消えます。よろしいですか？')) return;
+  lockLandscape(); startStage(1);
+};
+$('endB').onclick = () => { if (over === 1 && G.stage < STAGES.length) startStage(G.stage + 1); else if (over === 1) showTitle(); else restart(); };
+$('endB2').onclick = showTitle;
 
 let acc = 0, last = performance.now(), frames = 0, tfps = last, simMs = 0, simEma = 0;
 function frame(t) {
@@ -874,14 +961,14 @@ function frame(t) {
   $('cnt').textContent = `あなた ${c[1]}　敵 ${c[2]}`;
   const left = c[2] - Math.floor(c[1] * (1 - T) / T);   // 敵がこの数だけ減れば勝ち
   $('goal').textContent = over ? '' : left > 0 ? `敵の水を飲み込め　勝ちまで あと ${left} 粒` : '';
-  if (!over && G.time > 1) {
+  if (!over && !titleOn && G.time > 1) {
     const share = c[1] / Math.max(1, c[1] + c[2]);
     if (c[2] === 0 || share >= winShare()) over = 1; else if (c[1] === 0 || share <= LOSE_SHARE) over = 2;
     if (over) {
       const last = G.stage >= STAGES.length;
       $('endT').textContent = over === 2 ? '負け…' : last ? 'ゲームクリア！' : `STAGE ${G.stage} クリア！`;
-      $('endB').textContent = over === 2 ? 'もう一度' : last ? '最初から' : '次の面へ';
-      $('endB2').style.display = over === 2 && G.stage > 1 ? 'inline-block' : 'none';
+      $('endB').textContent = over === 2 ? 'もう一度' : last ? 'タイトルへ' : '次の面へ';
+      $('endB2').style.display = over === 2 ? 'inline-block' : 'none';
       if (over === 1) { try { localStorage.setItem(SAVE, last ? 1 : G.stage + 1); } catch (e) {} }
       $('end').style.display = 'flex';
     }
@@ -896,8 +983,7 @@ resize();
 addEventListener('resize', resize);
 addEventListener('orientationchange', () => setTimeout(resize, 200));
 addEventListener('contextmenu', e => e.preventDefault());
-let saved = 1; try { saved = +localStorage.getItem(SAVE) || 1; } catch (e) {}
-startStage(saved);
-window.__arena = { startStage, STAGES, G, GP, PRM, get n() { return n; }, newGame, step: substep, draw, fire, shoot, countOwners, mainRoot, BM, BX, BY, OWN, X, Y, VX, VY, get over() { return over; }, set over(v) { over = v; } };
+showTitle();
+window.__arena = { showTitle, get titleOn() { return titleOn; }, startStage, STAGES, G, GP, PRM, get n() { return n; }, newGame, step: substep, draw, fire, shoot, countOwners, mainRoot, BM, BX, BY, OWN, X, Y, VX, VY, get over() { return over; }, set over(v) { over = v; } };
 requestAnimationFrame(frame);
 </script>
