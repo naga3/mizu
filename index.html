@@ -24,7 +24,12 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #anchor{position:fixed;width:84px;height:84px;margin:-42px 0 0 -42px;border:2px dashed rgba(255,255,255,.35);border-radius:50%;pointer-events:none;display:none}
 #ring{position:fixed;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none;display:none}
 #ui{position:absolute;right:10px;top:8px;display:flex;gap:8px}
-#ui button{font-size:15px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;touch-action:manipulation}
+#ui button{width:44px;height:44px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff;touch-action:manipulation}
+#ui button::before{content:'';display:block;width:14px;height:16px;margin:auto;box-sizing:border-box;border-left:5px solid #fff;border-right:5px solid #fff}
+#pause{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(0,10,24,.58);font-size:38px;font-weight:bold;letter-spacing:.12em}
+#pauseBtns{display:flex;flex-direction:column;gap:12px;min-width:240px}
+#pauseBtns button{font-size:20px;padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;touch-action:manipulation}
+#pauseBtns button.main{background:rgba(110,220,255,.32);border-color:rgba(190,240,255,.95)}
 #end{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.35);font-size:40px;font-weight:bold}
 #end button,#endBtns button{font-size:18px;padding:10px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff}
 #stage{position:absolute;left:50%;top:44px;transform:translateX(-50%);font:bold 13px sans-serif;letter-spacing:.12em;color:rgba(220,240,255,.85);pointer-events:none}
@@ -41,12 +46,12 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #ttlBtns button{font-size:4.4cqh;padding:1.6cqh 5cqh;border-radius:999px;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.16);color:#fff;font-weight:bold;letter-spacing:.1em;text-shadow:0 1px 6px rgba(0,0,0,.5);touch-action:manipulation}
 #ttlBtns button.main{background:rgba(110,220,255,.34);border-color:rgba(190,240,255,.95)}
 #ttlBtns small{display:block;font-size:2.8cqh;font-weight:normal;letter-spacing:.12em;opacity:.9;margin-top:.4cqh}
-#box.onTitle #bar,#box.onTitle #cnt,#box.onTitle #stage,#box.onTitle #goal,#box.onTitle #ui,#box.onTitle #intro,#box.onTitle #end{display:none!important}
+#box.paused #goal,#box.paused #intro{display:none!important}
+#box.onTitle #pause,#box.onTitle #bar,#box.onTitle #cnt,#box.onTitle #stage,#box.onTitle #goal,#box.onTitle #ui,#box.onTitle #intro,#box.onTitle #end{display:none!important}
 #msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:18px}
 .touch{display:none}
 @media (pointer:coarse){
   .mouse{display:none}.touch{display:inline}
-  #ui button{padding:12px 16px}
   #hud{display:none}
   #help{font-size:12px;line-height:1.6}
   #ring{width:34px;height:34px;margin:-17px 0 0 -17px}
@@ -59,11 +64,12 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 <div id="cnt"></div>
 <div id="hud"></div>
 <div id="help"><span class="mouse">移動：マウス<br>撃つ：クリック（スペースキーでも）</span><span class="touch">移動：画面をなぞる<br>撃つ：もう1本の指でタップ</span></div>
-<div id="ui"><button id="bRst">やり直す</button><button id="bTitle">タイトル</button></div>
+<div id="ui"><button id="bPause" aria-label="ポーズ"></button></div>
 <div id="stage"></div>
 <div id="goal"></div>
 <div id="intro"></div>
 <div id="title"><h1>とぷるん</h1><p>水滴を操って、相手の水を飲み込め</p><div id="ttlBtns"><button id="btnCont" class="main">つづきから<small id="contStage"></small></button><button id="btnNew">はじめから</button></div></div>
+<div id="pause"><div>ポーズ</div><div id="pauseBtns"><button id="pResume" class="main">つづける</button><button id="pRestart">やり直す</button><button id="pTitle">タイトルへ</button></div></div>
 <div id="end"><div id="endT"></div><div id="endBtns"><button id="endB">もう一度</button><button id="endB2">タイトルへ</button></div></div>
 </div></div>
 <div id="anchor"></div>
@@ -820,7 +826,7 @@ function setTarget(e) { [G.tx, G.ty] = toWorld(e); G.hasT = true; ring.style.lef
 let lastDir = [0, -1];
 function fire() {
   const r = mainRoot[1];
-  if (r < 0) return false;
+  if (r < 0 || paused) return false;
   let dx, dy;
   if (G.rel) {                       // タッチ：指を動かした向きへ。動かしていなければ直前の向き
     if (Math.hypot(G.rel.dx, G.rel.dy) > 10) lastDir = [G.rel.dx, G.rel.dy];
@@ -860,8 +866,11 @@ cv.addEventListener('pointerup', release);
 cv.addEventListener('pointercancel', release);
 addEventListener('keydown', e => {
   if (titleOn) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ($('btnCont').style.display !== 'none' ? $('btnCont') : $('btnNew')).click(); } return; }
-  if (e.key === ' ') { e.preventDefault(); fire(); } else if (e.key === 'r') restart(); else if (e.key === 'Escape') showTitle();
+  if (e.key === 'Escape' || e.key === 'p') { setPause(!paused); return; }
+  if (paused) return;
+  if (e.key === ' ') { e.preventDefault(); fire(); }
 });
+
 const SAVE = 'mizuArena.stage';
 let introT = 0;
 function showIntro() {
@@ -896,7 +905,7 @@ function buildTitleWater() {
   }
 }
 function showTitle() {
-  titleOn = true; over = 0;
+  titleOn = true; over = 0; paused = false; $('pause').style.display = 'none'; $('box').classList.remove('paused');
   moveId = null; fireId = null; G.rel = null; mouseDown = false;
   $('end').style.display = 'none'; $('intro').style.opacity = 0;
   const sv = savedStage();
@@ -908,14 +917,24 @@ function showTitle() {
   buildTitleWater();
 }
 function startStage(k) {
-  titleOn = false; G.title = false; ptr.on = false; $('title').style.display = 'none'; $('box').classList.remove('onTitle');
+  titleOn = false; G.title = false; ptr.on = false; paused = false; $('pause').style.display = 'none'; $('box').classList.remove('paused'); $('title').style.display = 'none'; $('box').classList.remove('onTitle');
   G.stage = Math.min(Math.max(k, 1), STAGES.length);
   try { localStorage.setItem(SAVE, G.stage); } catch (e) {}
   newGame(); over = 0; $('end').style.display = 'none'; showIntro();
 }
 function restart() { startStage(G.stage); }
-$('bRst').onclick = restart;
-$('bTitle').onclick = showTitle;
+// ポーズ：止めて、つづける／やり直す／タイトルへ から選ぶ。押し間違えても、つづけるだけで元に戻る
+let paused = false;
+function setPause(v) {
+  if (v && (titleOn || over || portrait)) return;
+  paused = v; $('pause').style.display = v ? 'flex' : 'none'; $('box').classList.toggle('paused', v);
+  if (v) { moveId = null; fireId = null; G.rel = null; mouseDown = false; ptr.on = false; $('anchor').style.display = 'none'; ring.style.display = 'none'; }
+}
+$('bPause').onclick = () => setPause(true);
+$('pResume').onclick = () => setPause(false);
+$('pRestart').onclick = () => { setPause(false); restart(); };
+$('pTitle').onclick = () => { setPause(false); showTitle(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
 // タイトルでは、なぞった所の水が動く（離すと元の形に戻る）
 (function titleTouch() {
   const el = document.getElementById('title');
@@ -948,12 +967,13 @@ function frame(t) {
   acc += dt;
   const t0 = performance.now();
   let steps = 0;
-  if (!over && !portrait) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
+  if (!over && !portrait && !paused) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
   if (steps === 4) acc = 0;
   const ms = performance.now() - t0;
   simMs += ms; simEma += (ms - simEma) * .05;
   PRM.iters = simEma > 13 ? 2 : 3;
   draw();
+  $('ui').style.visibility = over ? 'hidden' : '';
   const c = countOwners(), tot = Math.max(1, n);
   const duel = Math.max(1, c[1] + c[2]), T = winShare();
   $('bP').style.width = c[1] / duel * 100 + '%'; $('bC').style.width = c[2] / duel * 100 + '%';
