@@ -822,7 +822,7 @@ function toWorld(e) {
   const r = document.getElementById('box').getBoundingClientRect();
   return [(e.clientX - r.left) * WW / r.width, (e.clientY - r.top) * WHH / r.height];
 }
-function setTarget(e) { [G.tx, G.ty] = toWorld(e); G.hasT = true; ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px'; ring.style.display = 'block'; }
+function setTarget(e) { [G.tx, G.ty] = toWorld(e); G.tx = Math.min(Math.max(G.tx, 0), WW); G.ty = Math.min(Math.max(G.ty, 0), WHH); G.hasT = true; ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px'; ring.style.display = 'block'; }
 let lastDir = [0, -1];
 function fire() {
   const r = mainRoot[1];
@@ -841,8 +841,12 @@ function relMove(e) {
   G.rel = { dx: e.clientX - ax, dy: e.clientY - ay };
   ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
 }
-cv.addEventListener('pointerdown', e => {
-  cv.setPointerCapture(e.pointerId);
+// 画面全体で操作を受ける（16:9 の外の黒い余白でも動かせる）。ボタン・メニュー・タイトルの上では受けない
+const UI_SEL = 'button, #pause, #end, #title, #rotate, #msg';
+const onGame = e => !titleOn && !paused && !(e.target.closest && e.target.closest(UI_SEL));
+window.addEventListener('pointerdown', e => {
+  if (!onGame(e)) return;
+  document.getElementById('fit').setPointerCapture(e.pointerId);
   if (coarse && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
   if (e.pointerType === 'mouse' && coarse) return;
   if (e.pointerType === 'mouse') { setTarget(e); mouseDown = true; fire(); }
@@ -853,8 +857,8 @@ cv.addEventListener('pointerdown', e => {
   }
   else if (fireId === null) { fireId = e.pointerId; fire(); }
 });
-cv.addEventListener('pointermove', e => {
-  if (e.pointerType === 'mouse') { if (!coarse) setTarget(e); }
+window.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse') { if (!coarse && onGame(e)) setTarget(e); }
   else if (e.pointerId === moveId) relMove(e);
 });
 const release = e => {
@@ -862,8 +866,8 @@ const release = e => {
   if (e.pointerId === moveId) { moveId = null; G.rel = null; anchor.style.display = 'none'; ring.style.display = 'none'; }
   if (e.pointerId === fireId) fireId = null;
 };
-cv.addEventListener('pointerup', release);
-cv.addEventListener('pointercancel', release);
+window.addEventListener('pointerup', release);
+window.addEventListener('pointercancel', release);
 addEventListener('keydown', e => {
   if (titleOn) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ($('btnCont').style.display !== 'none' ? $('btnCont') : $('btnNew')).click(); } return; }
   if (e.key === 'Escape' || e.key === 'p') { setPause(!paused); return; }
