@@ -10,8 +10,7 @@ html,body{margin:0;height:100%;background:#070b12;color:#d8ecf8;font-family:sans
 #fit{position:fixed;top:env(safe-area-inset-top);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom);left:env(safe-area-inset-left)}
 #box{position:absolute;overflow:hidden;background:#000}
 canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;cursor:none}
-#rotate{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#070b12;font-size:22px;font-weight:bold;letter-spacing:.08em}
-#rotate i{font-style:normal;font-size:64px;display:block;transform:rotate(90deg)}
+#rotate{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:100;display:none;text-align:center;font-size:15px;font-weight:bold;letter-spacing:.06em;color:rgba(235,246,255,.92);text-shadow:0 1px 6px rgba(0,0,0,.8);pointer-events:none}
 #bar{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(560px,56%);height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;pointer-events:none}
 #bar i{display:block;height:100%}
 #bP{background:#4cf0b8}#bC{background:#d46bff}
@@ -28,7 +27,7 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #ui button::before{content:'';display:block;width:14px;height:16px;margin:auto;box-sizing:border-box;border-left:5px solid #fff;border-right:5px solid #fff}
 #pause{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(0,10,24,.58);font-size:38px;font-weight:bold;letter-spacing:.12em}
 #pauseBtns{display:flex;flex-direction:column;gap:12px;min-width:240px}
-#pauseBtns button{font-size:20px;padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;touch-action:manipulation}
+#pauseBtns button{font-size:max(16px,20px);padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;touch-action:manipulation}
 #pauseBtns button.main{background:rgba(110,220,255,.32);border-color:rgba(190,240,255,.95)}
 #end{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.35);font-size:40px;font-weight:bold}
 #end button,#endBtns button{font-size:18px;padding:10px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff}
@@ -41,14 +40,20 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #box{container-type:size}
 #title{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3cqh;background:radial-gradient(ellipse at 50% 45%,rgba(4,26,46,.35),rgba(2,10,20,.72));text-align:center}
 #title h1{visibility:hidden;margin:0;font-size:min(22vh,12vw);font-size:22cqh;line-height:1;letter-spacing:.06em;font-weight:900;color:#eaffff;text-shadow:0 0 3cqh rgba(110,220,255,.85),0 .6cqh 4cqh rgba(0,40,80,.7)}
-#title p{margin:0;font-size:4.2cqh;letter-spacing:.14em;color:rgba(228,246,255,.92);text-shadow:0 1px 8px rgba(0,0,0,.7)}
+#title p{margin:0;font-size:max(11px,4.2cqh);letter-spacing:.14em;color:rgba(228,246,255,.92);text-shadow:0 1px 8px rgba(0,0,0,.7)}
 #ttlBtns{display:flex;gap:2.4cqh;margin-top:3cqh;flex-wrap:wrap;justify-content:center}
-#ttlBtns button{font-size:4.4cqh;padding:1.6cqh 5cqh;border-radius:999px;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.16);color:#fff;font-weight:bold;letter-spacing:.1em;text-shadow:0 1px 6px rgba(0,0,0,.5);touch-action:manipulation}
+#ttlBtns button{font-size:max(15px,4.4cqh);padding:max(8px,1.6cqh) max(22px,5cqh);border-radius:999px;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.16);color:#fff;font-weight:bold;letter-spacing:.1em;text-shadow:0 1px 6px rgba(0,0,0,.5);touch-action:manipulation}
 #ttlBtns button.main{background:rgba(110,220,255,.34);border-color:rgba(190,240,255,.95)}
 #ttlBtns small{display:block;font-size:2.8cqh;font-weight:normal;letter-spacing:.12em;opacity:.9;margin-top:.4cqh}
 #box.paused #goal,#box.paused #intro{display:none!important}
 #box.onTitle #pause,#box.onTitle #bar,#box.onTitle #cnt,#box.onTitle #stage,#box.onTitle #goal,#box.onTitle #ui,#box.onTitle #intro,#box.onTitle #end{display:none!important}
-#msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:18px}
+#msg{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:#070b12;padding:16px;box-sizing:border-box;overflow:auto;-webkit-user-select:text;user-select:text}
+#msgBox{max-width:min(680px,100%);max-height:100%;text-align:left;line-height:1.6}
+#msgBox h2{margin:0 0 6px;font-size:24px;letter-spacing:.04em}
+#msgBox p{margin:0 0 12px;font-size:14px;color:rgba(220,240,255,.85)}
+#msgBox pre{margin:0 0 12px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.08);font:12px/1.5 monospace;white-space:pre-wrap;word-break:break-all;-webkit-user-select:text;user-select:text}
+#msgBox button{font-size:15px;padding:9px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.14);color:#fff}
+#errBanner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:900;display:none;padding:8px 14px;border-radius:999px;background:rgba(160,40,40,.85);color:#fff;font-size:13px;white-space:nowrap}
 .touch{display:none}
 @media (pointer:coarse){
   .mouse{display:none}.touch{display:inline}
@@ -74,8 +79,59 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 </div></div>
 <div id="anchor"></div>
 <div id="ring"></div>
-<div id="rotate"><i>⟳</i>横向きにしてください</div>
-<div id="msg">WebGL2 が使えません</div>
+<div id="rotate">横向きにすると、大きく遊べます</div>
+<div id="msg"><div id="msgBox"><h2 id="msgT"></h2><p id="msgS"></p><pre id="msgD"></pre><button id="msgCopy">詳細をコピー</button></div></div>
+<div id="errBanner">エラーが発生しました（タップで詳細）</div>
+<script>
+// ---- エラー表示（ゲーム本体より先に読み込む。本体が途中で止まっても表示できるようにする）----
+(function () {
+  const $ = id => document.getElementById(id);
+  function deviceInfo() {
+    const L = [];
+    L.push('UA: ' + navigator.userAgent);
+    L.push(`画面: ${screen.width}x${screen.height}  表示領域: ${innerWidth}x${innerHeight}  dpr: ${window.devicePixelRatio}  タッチ: ${navigator.maxTouchPoints || 0}`);
+    try {
+      const c = document.createElement('canvas'), g2 = c.getContext('webgl2'), g1 = g2 ? null : (c.getContext('webgl') || c.getContext('experimental-webgl'));
+      const g = g2 || g1;
+      L.push('WebGL2: ' + (g2 ? 'あり' : 'なし') + '  WebGL1: ' + (g1 ? 'あり' : g2 ? '(WebGL2 があるので未確認)' : 'なし'));
+      if (g) {
+        const d = g.getExtension('WEBGL_debug_renderer_info');
+        L.push('GPU: ' + (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : g.getParameter(g.RENDERER)));
+        L.push('GL: ' + g.getParameter(g.VERSION) + '  最大テクスチャ: ' + g.getParameter(g.MAX_TEXTURE_SIZE));
+        if (g2) L.push('EXT_color_buffer_float: ' + !!g.getExtension('EXT_color_buffer_float') + '  EXT_color_buffer_half_float: ' + !!g.getExtension('EXT_color_buffer_half_float'));
+      }
+    } catch (e) { L.push('WebGL 情報の取得に失敗: ' + e); }
+    return L.join('\n');
+  }
+  let last = '';
+  function open(title, sub, detail) {
+    last = title + '\n' + detail + '\n\n' + deviceInfo();
+    $('msgT').textContent = title; $('msgS').textContent = sub; $('msgD').textContent = detail + '\n\n--- 端末情報 ---\n' + deviceInfo();
+    $('msg').style.display = 'flex';
+  }
+  // 動かせない端末（WebGL2 や浮動小数点の描画先がない等）
+  let unsupported = false;
+  window.showUnsupported = function (detail) {
+    unsupported = true;
+    open('サポート外の機種です', 'この端末・ブラウザでは、このゲームを動かせません。WebGL2 に対応した、新しいブラウザ（iOS 15 以降の Safari、最新の Chrome など）でお試しください。以下は、原因の詳細です。', detail);
+  };
+  // 想定外のエラー。ゲームが始まる前なら画面を止めて表示、始まった後なら小さな案内だけ出す
+  let pending = null;
+  function report(detail) {
+    if (unsupported || pending) return; pending = detail;   // サポート外の画面を出したあとの、停止用の例外では上書きしない
+    if (!window.__arena) { open('エラーが発生しました', 'ゲームを始められませんでした。以下は、エラーの詳細です。', detail); return; }
+    $('errBanner').style.display = 'block';
+  }
+  $('errBanner').onclick = () => { open('エラーが発生しました', 'ゲームは動き続けていますが、問題が起きました。以下は、エラーの詳細です。', pending || ''); };
+  window.addEventListener('error', e => report(`${e.message}\n  at ${(e.filename || '').split('/').pop()}:${e.lineno}:${e.colno}${e.error && e.error.stack ? '\n' + e.error.stack : ''}`));
+  window.addEventListener('unhandledrejection', e => report('未処理の Promise エラー: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+  $('msgCopy').onclick = () => {
+    const t = last; const done = () => { $('msgCopy').textContent = 'コピーしました'; setTimeout(() => { $('msgCopy').textContent = '詳細をコピー'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => { const r = document.createRange(); r.selectNodeContents($('msgD')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); });
+    else { const r = document.createRange(); r.selectNodeContents($('msgD')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  };
+})();
+</script>
 <script>
 // ---SIM-BEGIN---
 
@@ -508,18 +564,18 @@ const cv = document.getElementById('c');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
 const hud = document.getElementById('hud');
 let FW = 1, FH = 1, dpr = 1;
-function fail(m) { const e = document.getElementById('msg'); e.textContent = m; e.style.display = 'flex'; throw new Error(m); }
-if (!gl) fail('WebGL2 が使えません');
-gl.getExtension('EXT_color_buffer_float'); gl.getExtension('EXT_color_buffer_half_float');
+function fail(m) { window.showUnsupported(m); throw new Error(m.split('\n')[0]); }
+if (!gl) fail('原因: WebGL2 が使えません（getContext(\'webgl2\') が null を返しました）');
+const extFloat = gl.getExtension('EXT_color_buffer_float'), extHalf = gl.getExtension('EXT_color_buffer_half_float');
 function prog(vs, fs) {
   const p = gl.createProgram();
   for (const [t, s_] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
     const s = gl.createShader(t); gl.shaderSource(s, s_); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) fail(gl.getShaderInfoLog(s));
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) fail(`原因: ${t === gl.VERTEX_SHADER ? '頂点' : 'フラグメント'}シェーダのコンパイルに失敗しました\n${gl.getShaderInfoLog(s)}`);
     gl.attachShader(p, s);
   }
   gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) fail(gl.getProgramInfoLog(p));
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) fail(`原因: シェーダのリンクに失敗しました\n${gl.getProgramInfoLog(p)}`);
   return p;
 }
 // 密度場 RGBA16F：R=全体、G=あなた、B=CPU、A=速さ
@@ -763,7 +819,8 @@ function initField() {
   fbo = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fieldTex, 0);
-  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) fail('浮動小数点テクスチャに描けません');
+  const fbs = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  if (fbs !== gl.FRAMEBUFFER_COMPLETE) fail(`原因: 浮動小数点テクスチャ（RGBA16F）に描画できません\nEXT_color_buffer_float: ${!!extFloat}\nEXT_color_buffer_half_float: ${!!extHalf}\nframebuffer status: 0x${fbs.toString(16)}`);
 }
 // 16:9 の箱を、収まる最大の大きさで中央に置く（余白は黒）
 let portrait = false;
@@ -776,8 +833,8 @@ function resize() {
   box.style.left = Math.floor((aw - bw) / 2) + 'px'; box.style.top = Math.floor((ah - bh) / 2) + 'px';
   dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
   cv.width = Math.round(bw * dpr); cv.height = Math.round(bh * dpr);
-  portrait = coarse && innerHeight > innerWidth;     // スマホは横向き専用
-  document.getElementById('rotate').style.display = portrait ? 'flex' : 'none';
+  portrait = coarse && innerHeight > innerWidth;     // 縦向き：止めずに、小さく表示して案内だけ出す
+  document.getElementById('rotate').style.display = portrait ? 'block' : 'none';
 }
 const U = {};
 function u(p, name) { const k = (p === pProg ? 'p' : 'c') + name; return U[k] || (U[k] = gl.getUniformLocation(p, name)); }
@@ -842,7 +899,7 @@ function relMove(e) {
   ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
 }
 // 画面全体で操作を受ける（16:9 の外の黒い余白でも動かせる）。ボタン・メニュー・タイトルの上では受けない
-const UI_SEL = 'button, #pause, #end, #title, #rotate, #msg';
+const UI_SEL = 'button, #pause, #end, #title, #rotate, #msg, #errBanner';
 const onGame = e => !titleOn && !paused && !(e.target.closest && e.target.closest(UI_SEL));
 window.addEventListener('pointerdown', e => {
   if (!onGame(e)) return;
@@ -930,7 +987,7 @@ function restart() { startStage(G.stage); }
 // ポーズ：止めて、つづける／やり直す／タイトルへ から選ぶ。押し間違えても、つづけるだけで元に戻る
 let paused = false;
 function setPause(v) {
-  if (v && (titleOn || over || portrait)) return;
+  if (v && (titleOn || over)) return;
   paused = v; $('pause').style.display = v ? 'flex' : 'none'; $('box').classList.toggle('paused', v);
   if (v) { moveId = null; fireId = null; G.rel = null; mouseDown = false; ptr.on = false; $('anchor').style.display = 'none'; ring.style.display = 'none'; }
 }
@@ -971,7 +1028,7 @@ function frame(t) {
   acc += dt;
   const t0 = performance.now();
   let steps = 0;
-  if (!over && !portrait && !paused) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
+  if (!over && !paused) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
   if (steps === 4) acc = 0;
   const ms = performance.now() - t0;
   simMs += ms; simEma += (ms - simEma) * .05;
