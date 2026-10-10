@@ -14,7 +14,7 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #rotate i{font-style:normal;font-size:64px;display:block;transform:rotate(90deg)}
 #bar{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(560px,56%);height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;pointer-events:none}
 #bar i{display:block;height:100%}
-#bP{background:#4cf0b8}#bN{background:rgba(190,225,255,.35)}#bC{background:#ff7a4d}
+#bP{background:#4cf0b8}#bN{background:rgba(190,225,255,.35)}#bC{background:#d46bff}
 #cnt{position:absolute;left:50%;top:26px;transform:translateX(-50%);font:12px monospace;color:rgba(220,240,255,.75);pointer-events:none;white-space:pre}
 #hud{position:absolute;left:10px;top:8px;font:12px/1.4 monospace;color:rgba(200,235,255,.6);pointer-events:none;white-space:pre}
 #help{transition:opacity 1s;position:absolute;left:10px;bottom:10px;font-size:13px;line-height:1.6;color:rgba(210,235,250,.7);pointer-events:none}
@@ -25,7 +25,7 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;curso
 #end{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.35);font-size:40px;font-weight:bold}
 #end button,#endBtns button{font-size:18px;padding:10px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff}
 #stage{position:absolute;left:50%;top:44px;transform:translateX(-50%);font:bold 13px sans-serif;letter-spacing:.12em;color:rgba(220,240,255,.85);pointer-events:none}
-#stage.boss{color:#ff9a6a}
+#stage.boss{color:#e0a0ff}
 #intro{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:44px;font-weight:bold;letter-spacing:.1em;pointer-events:none;opacity:0;transition:opacity .5s;text-shadow:0 2px 12px rgba(0,0,0,.6)}
 #intro small{display:block;font-size:16px;font-weight:normal;letter-spacing:.2em;opacity:.8;margin-top:6px}
 #endBtns{display:flex;gap:12px}
@@ -508,9 +508,10 @@ const cProg = prog(`#version 300 es
 void main(){ vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); gl_Position = vec4(p * 2. - 1., 0., 1.); }`,
 `#version 300 es
 precision highp float;
-uniform sampler2D uF; uniform vec2 uRes; uniform vec2 uWorld; uniform float uDpr; uniform float uTime; uniform float uBoss; uniform float uLift;
+uniform sampler2D uF; uniform vec2 uRes; uniform vec2 uWorld; uniform float uDpr; uniform float uTime; uniform float uBoss;
+const float uLift = 1.;   // 水ではなく底を明るくして透明感を保つ（採用）
 const int uFx = 193; const int uBg = 4; const int uTint = 0; const int uPop = -1;
-const vec3 CP = vec3(.25,1.,.72), CC = vec3(1.,.42,.22);
+const vec3 CP = vec3(.25,1.,.72), CC = vec3(1.,.26,.92);   // あなた=緑、敵=紫
 out vec4 o;
 const float ISO = 1.1;
 bool on(int b){ return ((uFx >> b) & 1) == 1; }
@@ -671,8 +672,8 @@ void main(){
   float wp = clamp(F.g / max(f, 1e-3), 0., 1.), wc = clamp(F.b / max(f, 1e-3), 0., 1.);
   float ow = clamp(wp + wc, 0., 1.);
   vec3 oc = (CP * wp + CC * wc) / max(wp + wc, 1e-3);
-  vec3 ownerCol = refr * (oc * .9 + .1) * 1.3 + oc * (.08 + .16 * thick) * (1. + 1.6 * uBoss * wc);   // ボス面は CPU の水を強く光らせる
-  col = mix(col, ownerCol, ow * .6);                                              // 所有者の色
+  vec3 ownerCol = refr * (oc * .9 + .1) * 1.3 + oc * (.08 + .16 * thick) * (1. + (.6 + 1.6 * uBoss) * wc);   // ボス面は CPU の水を強く光らせる
+  col = mix(col, ownerCol, clamp(wp * .6 + wc * .8, 0., 1.));                                              // 所有者の色
   if (uTint == 1) col *= vec3(.62,.86,1.15);
   else if (uTint == 2) col *= vec3(.7,1.12,.9);
   else if (uTint == 3) col *= vec3(1.1,.85,.95);
@@ -771,7 +772,6 @@ function draw() {
   gl.uniform1f(u(cProg, 'uDpr'), cv.width / WW);   // 世界の1単位あたりの描画ピクセル数
   gl.uniform1f(u(cProg, 'uTime'), performance.now() / 1000);
   gl.uniform1f(u(cProg, 'uBoss'), stageCfg().boss ? 1 : 0);
-  gl.uniform1f(u(cProg, 'uLift'), lift);
   gl.bindVertexArray(quadVao);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
@@ -826,15 +826,14 @@ const release = e => {
 };
 cv.addEventListener('pointerup', release);
 cv.addEventListener('pointercancel', release);
-let lift = /bright/.test(location.hash) ? 1 : 0;   // B キーまたは URL に #bright で、透明感を保つ明るさのテスト
-addEventListener('keydown', e => { if (e.key === 'b') lift = 1 - lift; else if (e.key === ' ') { e.preventDefault(); fire(); } else if (e.key === 'r') restart(); });
+addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); fire(); } else if (e.key === 'r') restart(); });
 $('bFire').addEventListener('pointerdown', e => { e.stopPropagation(); fire(); });
 const SAVE = 'mizuArena.stage';
 let introT = 0;
 function showIntro() {
   const cfg = stageCfg(), el = $('intro');
   el.innerHTML = cfg.boss ? 'BOSS<small>STAGE 10</small>' : `STAGE ${G.stage}`;
-  el.style.color = cfg.boss ? '#ff9a6a' : '#e8f6ff';
+  el.style.color = cfg.boss ? '#e0a0ff' : '#e8f6ff';
   el.style.opacity = 1; clearTimeout(introT); introT = setTimeout(() => { el.style.opacity = 0; }, 1600);
   $('stage').textContent = cfg.boss ? 'STAGE 10 / 10  BOSS' : `STAGE ${G.stage} / ${STAGES.length}`;
   $('stage').className = cfg.boss ? 'boss' : '';
@@ -889,7 +888,7 @@ addEventListener('orientationchange', () => setTimeout(resize, 200));
 addEventListener('contextmenu', e => e.preventDefault());
 let saved = 1; try { saved = +localStorage.getItem(SAVE) || 1; } catch (e) {}
 startStage(saved);
-window.__arena = { get lift() { return lift; }, set lift(v) { lift = v; }, startStage, STAGES, G, GP, PRM, get n() { return n; }, newGame, step: substep, draw, fire, shoot, countOwners, mainRoot, BM, BX, BY, OWN, X, Y, VX, VY, get over() { return over; }, set over(v) { over = v; } };
+window.__arena = { startStage, STAGES, G, GP, PRM, get n() { return n; }, newGame, step: substep, draw, fire, shoot, countOwners, mainRoot, BM, BX, BY, OWN, X, Y, VX, VY, get over() { return over; }, set over(v) { over = v; } };
 setTimeout(() => { $('help').style.opacity = 0; }, 9000);
 requestAnimationFrame(frame);
 </script>
