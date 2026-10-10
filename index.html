@@ -7,22 +7,26 @@
 <title>水アリーナ</title>
 <style>
 html,body{margin:0;height:100%;background:#070b12;color:#d8ecf8;font-family:sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block;cursor:none}
-#bar{position:fixed;left:50%;top:10px;transform:translateX(-50%);width:min(560px,70vw);height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;pointer-events:none}
+#fit{position:fixed;top:env(safe-area-inset-top);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom);left:env(safe-area-inset-left)}
+#box{position:absolute;overflow:hidden;background:#000}
+canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;cursor:none}
+#rotate{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#070b12;font-size:22px;font-weight:bold;letter-spacing:.08em}
+#rotate i{font-style:normal;font-size:64px;display:block;transform:rotate(90deg)}
+#bar{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(560px,56%);height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;pointer-events:none}
 #bar i{display:block;height:100%}
 #bP{background:#4cf0b8}#bN{background:rgba(190,225,255,.35)}#bC{background:#ff7a4d}
-#cnt{position:fixed;left:50%;top:26px;transform:translateX(-50%);font:12px monospace;color:rgba(220,240,255,.75);pointer-events:none;white-space:pre}
-#hud{position:fixed;left:10px;top:8px;font:12px/1.4 monospace;color:rgba(200,235,255,.6);pointer-events:none;white-space:pre}
-#help{transition:opacity 1s;position:fixed;left:10px;bottom:10px;font-size:13px;line-height:1.6;color:rgba(210,235,250,.7);pointer-events:none}
+#cnt{position:absolute;left:50%;top:26px;transform:translateX(-50%);font:12px monospace;color:rgba(220,240,255,.75);pointer-events:none;white-space:pre}
+#hud{position:absolute;left:10px;top:8px;font:12px/1.4 monospace;color:rgba(200,235,255,.6);pointer-events:none;white-space:pre}
+#help{transition:opacity 1s;position:absolute;left:10px;bottom:10px;font-size:13px;line-height:1.6;color:rgba(210,235,250,.7);pointer-events:none}
 #anchor{position:fixed;width:84px;height:84px;margin:-42px 0 0 -42px;border:2px dashed rgba(255,255,255,.35);border-radius:50%;pointer-events:none;display:none}
 #ring{position:fixed;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none;display:none}
-#ui{position:fixed;right:10px;top:8px;display:flex;gap:8px}
+#ui{position:absolute;right:10px;top:8px;display:flex;gap:8px}
 #ui button{font-size:15px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;touch-action:manipulation}
-#end{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.35);font-size:40px;font-weight:bold}
+#end{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.35);font-size:40px;font-weight:bold}
 #end button,#endBtns button{font-size:18px;padding:10px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff}
-#stage{position:fixed;left:50%;top:44px;transform:translateX(-50%);font:bold 13px sans-serif;letter-spacing:.12em;color:rgba(220,240,255,.85);pointer-events:none}
+#stage{position:absolute;left:50%;top:44px;transform:translateX(-50%);font:bold 13px sans-serif;letter-spacing:.12em;color:rgba(220,240,255,.85);pointer-events:none}
 #stage.boss{color:#ff9a6a}
-#intro{position:fixed;left:0;right:0;top:34%;text-align:center;font-size:44px;font-weight:bold;letter-spacing:.1em;pointer-events:none;opacity:0;transition:opacity .5s;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+#intro{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:44px;font-weight:bold;letter-spacing:.1em;pointer-events:none;opacity:0;transition:opacity .5s;text-shadow:0 2px 12px rgba(0,0,0,.6)}
 #intro small{display:block;font-size:16px;font-weight:normal;letter-spacing:.2em;opacity:.8;margin-top:6px}
 #endBtns{display:flex;gap:12px}
 #endB2{display:none}
@@ -30,26 +34,27 @@ canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block;cursor:n
 .touch{display:none}
 @media (pointer:coarse){
   .mouse{display:none}.touch{display:inline}
-  #ui{top:max(8px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
-  #bar{top:calc(max(8px,env(safe-area-inset-top)) + 54px)}#cnt{top:calc(max(8px,env(safe-area-inset-top)) + 70px)}#stage{top:calc(max(8px,env(safe-area-inset-top)) + 90px)}#intro{font-size:34px}#hud{display:none}
   #ui button{padding:12px 16px}
-  #bFire{display:none}
-  #help{bottom:max(10px,env(safe-area-inset-bottom));font-size:12px;max-width:55vw}
+  #bFire,#hud{display:none}
+  #help{font-size:11px;max-width:46%;line-height:1.5}
   #ring{width:34px;height:34px;margin:-17px 0 0 -17px}
   #endT{font-size:34px}
 }
 </style>
+<div id="fit"><div id="box">
 <canvas id="c"></canvas>
 <div id="bar"><i id="bP"></i><i id="bN"></i><i id="bC"></i></div>
 <div id="cnt"></div>
 <div id="hud"></div>
 <div id="help"><span class="mouse">マウスで水を動かす ／ クリック・スペース：水を撃つ</span><span class="touch">指を置いた所から動かした向きへ進む ／ もう一本の指でタップすると、動かしている向きへ水を撃つ</span><br>大きい水は小さい水を吸収する。速く当てると砕ける。相手を飲み込め</div>
-<div id="anchor"></div>
-<div id="ring"></div>
 <div id="ui"><button id="bFire">撃つ</button><button id="bRst">最初から</button></div>
 <div id="stage"></div>
 <div id="intro"></div>
 <div id="end"><div id="endT"></div><div id="endBtns"><button id="endB">もう一度</button><button id="endB2">1面から</button></div></div>
+</div></div>
+<div id="anchor"></div>
+<div id="ring"></div>
+<div id="rotate"><i>⟳</i>横向きにしてください</div>
 <div id="msg">WebGL2 が使えません</div>
 <script>
 // ---SIM-BEGIN---
@@ -707,21 +712,33 @@ gl.bindBuffer(gl.ARRAY_BUFFER, pbuf);
 gl.bufferData(gl.ARRAY_BUFFER, pdata.byteLength, gl.DYNAMIC_DRAW);
 { const loc = gl.getAttribLocation(pProg, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 16, 0); }
 let fieldTex, fbo;
-function resize() {
-  dpr = Math.min(window.devicePixelRatio || 1, matchMedia('(pointer:coarse)').matches ? 1.5 : 2);
-  const cw = innerWidth, ch = innerHeight;
-  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
-  FW = cw; FH = ch;
-  resizeWorld(cw, ch);
-  if (fieldTex) gl.deleteTexture(fieldTex);
+const WW = 1280, WHH = 720;                 // ゲームの世界の大きさ（固定）。画面が違っても同じ難しさになる
+const coarse = matchMedia('(pointer:coarse)').matches;   // タッチ主体の端末
+function initField() {
+  FW = WW; FH = WHH;
+  resizeWorld(WW, WHH);
   fieldTex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, fieldTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, FW, FH, 0, gl.RGBA, gl.HALF_FLOAT, null);
   for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-  if (!fbo) fbo = gl.createFramebuffer();
+  fbo = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fieldTex, 0);
   if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) fail('浮動小数点テクスチャに描けません');
+}
+// 16:9 の箱を、収まる最大の大きさで中央に置く（余白は黒）
+let portrait = false;
+function resize() {
+  const fit = document.getElementById('fit'), box = document.getElementById('box');
+  const aw = fit.clientWidth, ah = fit.clientHeight;
+  const s = Math.min(aw / WW, ah / WHH);
+  const bw = Math.max(1, Math.floor(WW * s)), bh = Math.max(1, Math.floor(WHH * s));
+  box.style.width = bw + 'px'; box.style.height = bh + 'px';
+  box.style.left = Math.floor((aw - bw) / 2) + 'px'; box.style.top = Math.floor((ah - bh) / 2) + 'px';
+  dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
+  cv.width = Math.round(bw * dpr); cv.height = Math.round(bh * dpr);
+  portrait = coarse && innerHeight > innerWidth;     // スマホは横向き専用
+  document.getElementById('rotate').style.display = portrait ? 'flex' : 'none';
 }
 const U = {};
 function u(p, name) { const k = (p === pProg ? 'p' : 'c') + name; return U[k] || (U[k] = gl.getUniformLocation(p, name)); }
@@ -750,7 +767,7 @@ function draw() {
   gl.uniform1i(u(cProg, 'uF'), 0);
   gl.uniform2f(u(cProg, 'uRes'), cv.width, cv.height);
   gl.uniform2f(u(cProg, 'uWorld'), FW, FH);
-  gl.uniform1f(u(cProg, 'uDpr'), dpr);
+  gl.uniform1f(u(cProg, 'uDpr'), cv.width / WW);   // 世界の1単位あたりの描画ピクセル数
   gl.uniform1f(u(cProg, 'uTime'), performance.now() / 1000);
   gl.uniform1f(u(cProg, 'uBoss'), stageCfg().boss ? 1 : 0);
   gl.bindVertexArray(quadVao);
@@ -761,7 +778,11 @@ function draw() {
 const $ = id => document.getElementById(id);
 const ring = $('ring');
 let over = 0, mouseDown = false;
-function setTarget(e) { G.tx = e.clientX; G.ty = e.clientY; G.hasT = true; ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px'; ring.style.display = 'block'; }
+function toWorld(e) {
+  const r = document.getElementById('box').getBoundingClientRect();
+  return [(e.clientX - r.left) * WW / r.width, (e.clientY - r.top) * WHH / r.height];
+}
+function setTarget(e) { [G.tx, G.ty] = toWorld(e); G.hasT = true; ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px'; ring.style.display = 'block'; }
 let lastDir = [0, -1];
 function fire() {
   const r = mainRoot[1];
@@ -774,7 +795,6 @@ function fire() {
   return shoot(1, dx, dy);
 }
 // マウス：位置へ向かう／左ボタンで撃つ。タッチ：最初の指は触れた点を基準に相対移動、あとから触れた別の指のタップで撃つ（押しっぱなしで連射）
-const coarse = matchMedia('(pointer:coarse)').matches;   // タッチ主体の端末では、合成されたマウスの動きを無視する
 let moveId = null, fireId = null, ax = 0, ay = 0;
 const anchor = $('anchor');
 function relMove(e) {
@@ -783,6 +803,7 @@ function relMove(e) {
 }
 cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId);
+  if (coarse && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
   if (e.pointerType === 'mouse' && coarse) return;
   if (e.pointerType === 'mouse') { setTarget(e); mouseDown = true; fire(); }
   else if (moveId === null) {
@@ -832,7 +853,7 @@ function frame(t) {
   acc += dt;
   const t0 = performance.now();
   let steps = 0;
-  if (!over) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
+  if (!over && !portrait) { while (acc >= DT && steps < 4) { substep(DT); acc -= DT; steps++; } } else acc = 0;
   if (steps === 4) acc = 0;
   const ms = performance.now() - t0;
   simMs += ms; simEma += (ms - simEma) * .05;
@@ -858,6 +879,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 calibrate();
+initField();
 resize();
 addEventListener('resize', resize);
 addEventListener('orientationchange', () => setTimeout(resize, 200));
